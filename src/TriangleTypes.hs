@@ -44,11 +44,16 @@ findTriangles :: Graph -> [Triangle]
 findTriangles g = List.nub $ flatMap (go Empty) g
     where
         go :: LineTrace -> Line -> [Triangle]
+        -- Adding a line to a triple is an invalid operation, return an empty list
         go (Triple _) _ = []
+        -- Adding a line to a double just makes a triangle (if it's valid - otherwise empty list)
         go (Double (l1, l2)) l3 = map fromJust $ filter isJust [makeTriangle (Triple (l1, l2, l3))]
+        -- Adding a line to a single means finding the lines that cross them, which will make triangles. 
+        -- so we map across the graph, effectively iterating through the lines to see if they form a triangle with the two we started with
         go (Single l1) l2
             | validate (Double (l1, l2)) = flatMap (go (Double (l1, l2))) g
             | otherwise = []
+        -- Starting point. Iterate through each line in the graph, recursing.
         go Empty l1 = flatMap (go (Single l1)) g
 
 -- Make a Triangle from a Triple (or nothing from a lesser trace)
@@ -60,9 +65,13 @@ makeTriangle _ = Nothing
 
 -- Is a given trace valid
 validate :: LineTrace -> Bool
+-- Empty's always valid
 validate Empty = True
+-- Singles are always valid
 validate (Single _) = True
+-- Doubles are valid if the two lines are non-equal
 validate (Double (l1, l2)) = (l1 /= l2) && (intersect l1 l2)
+-- Triples are valid if they're not colinear and they actually form a valid triangle
 validate (Triple (l1, l2, l3)) = (l1 /= l3) && (l2 /= l3) && (intersect l1 l3) && (intersect l2 l3) && (validateTriangle l1 l2 l3)
 
 -- Is a given triple a triangle
